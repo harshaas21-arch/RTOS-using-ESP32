@@ -230,8 +230,53 @@ void app_main(void) {
     }
 }
 ```
+
+---
+
+### 8. Multi-Event Coordination via Event Groups
+When an execution routine requires **multiple separate conditions to be met simultaneously** before unblocking (such as waiting for multiple hardware modules to finish booting), using multiple nested semaphores introduces code complexity. An **Event Group** provides an atomic bitmask where a task can remain suspended until an exact pattern of bits (`AND` or `OR` combinations) is set.
+
+#### 🛠️ Essential APIs Used
+*   `xEventGroupCreate()`: Spawns the internal event tracking bitmask workspace.
+*   `xEventGroupSetBits(handle, bits_to_set)`: Atomically transitions specific bit positions high.
+*   `xEventGroupWaitBits(...)`: Halts a task until target bit flags are cleared or filled.
+
+---
+
+### 9. High-Speed, Zero-RAM Signaling via Task Notifications
+Creating distinct synchronization primitives (like queues or binary semaphores) incurs both RAM footprint and scheduler lookup overhead. **Task Notifications** allow threads to signal each other directly by writing straight to a 32-bit tracking register pre-allocated within the destination task's **Task Control Block (TCB)**. This bypasses object handles entirely, yielding a performance improvement of roughly **45%**.
+
+#### 📋 Code Implementation
+```c
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+TaskHandle_t receiver_task_handle = NULL;
+
+void sender_task(void *pvParameters) {
+    while(1) {
+        vTaskDelay(2500 / portTICK_PERIOD_MS);
+        printf("[Sender Task] Work complete. Injecting direct notification...\n");
+        xTaskNotifyGive(receiver_task_handle); // Target the task handle directly
+    }
+}
+
+void receiver_task(void *pvParameters) {
+    while(1) {
+        printf("[Receiver Task] Going to sleep, waiting for a direct notification...\n");
+        uint32_t notification_value = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        printf("[Receiver Task] Woke up! Token event count: %d\n", (int)notification_value);
+    }
+}
+
+void app_main(void) {
+    xTaskCreate(receiver_task, "Receiver", 2048, NULL, 5, &receiver_task_handle);
+    xTaskCreate(sender_task, "Sender", 2048, NULL, 5, NULL);
+}
+```
 📺 Console Output Behavior
-Plaintext
+
 Initializing Software Timers ....
 I (254) main_task: Returned from app_main()
 [Software Timer] Callback fired! Running without a dedicated task thread.
