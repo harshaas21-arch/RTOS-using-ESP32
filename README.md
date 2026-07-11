@@ -41,6 +41,8 @@ void app_main(void){
     xTaskCreate(print_message_task, "Print Task", 2048, NULL, 5, NULL);
     xTaskCreate(counter_task, "Counter Task", 2048, NULL, 5, NULL);
 }
+```c
+
 📺 Console Output Behavior
 Learning RTOS from scratch 
 Counter: 0
@@ -50,10 +52,10 @@ Counter: 3
 Learning RTOS from scratch
 Analysis: Because both tasks operate at identical priority metrics (5), the scheduler divides runtime evenly using round-robin scheduling. The counter runs exactly 4 times for every 1 print from the primary message task.
 
-2. Dynamic Task Abstraction via Parameters (pvParameters)
+### 2. Dynamic Task Abstraction via Parameters (pvParameters)
 Hardcoding unique logic tasks for identical targets reduces memory efficiency. FreeRTOS handles task instantiation reuse by utilizing a generic pointer configuration argument (void *pvParameters).
 
-🛠️ Mechanics Breakdown
+#### 🛠️ Mechanics Breakdown
 A void * parameter acts as a universal reference mechanism in C. It allows data payloads (primitives, arrays, configurations, structs) to pass smoothly into identical function tasks.
 
 📋 Code Implementation
