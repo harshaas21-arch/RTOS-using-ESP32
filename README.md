@@ -41,7 +41,7 @@ void app_main(void){
     xTaskCreate(print_message_task, "Print Task", 2048, NULL, 5, NULL);
     xTaskCreate(counter_task, "Counter Task", 2048, NULL, 5, NULL);
 }
-```c
+```
 
 📺 Console Output Behavior
 Learning RTOS from scratch 
@@ -53,12 +53,14 @@ Learning RTOS from scratch
 Analysis: Because both tasks operate at identical priority metrics (5), the scheduler divides runtime evenly using round-robin scheduling. The counter runs exactly 4 times for every 1 print from the primary message task.
 
 ### 2. Dynamic Task Abstraction via Parameters (pvParameters)
+
 Hardcoding unique logic tasks for identical targets reduces memory efficiency. FreeRTOS handles task instantiation reuse by utilizing a generic pointer configuration argument (void *pvParameters).
 
 #### 🛠️ Mechanics Breakdown
 A void * parameter acts as a universal reference mechanism in C. It allows data payloads (primitives, arrays, configurations, structs) to pass smoothly into identical function tasks.
 
 📋 Code Implementation
+```c
 typedef struct {
     char *task_message;
     int delay_ms;
@@ -79,15 +81,16 @@ void app_main(void){
     xTaskCreate(generic_print_task, "Fast print", 2048, &task1_data, 5, NULL);
     xTaskCreate(generic_print_task, "Slow print", 2048, &task2_data, 5, NULL);
 }
-
-3. Inter-Task Thread-Safe Communication via Queues
+```
+### 3. Inter-Task Thread-Safe Communication via Queues
 Directly sharing memory locations or global storage flags between running loops causes memory corruption or data race vulnerabilities. Queues provide a secure First-In, First-Out (FIFO) conveyor belt managed directly by the kernel core.
 
-Function Name,Description,Key Parameters
+#### Function Name,Description,Key Parameters
 "xQueueCreate(length, item_size)",Allocates RAM blocks for thread-safe buffer structures.,length: Max element limits.item_size: Storage element footprint in bytes.
 "xQueueSend(queue, pvItemToQueue, xTicksToWait)",Safely appends a data record element to the end of a queue.,queue: Handle reference.pvItemToQueue: Variable pointer source.
 "xQueueReceive(queue, pvBuffer, xTicksToWait)",Safely retrieves and drops an item from the front of the queue.,xTicksToWait: Use portMAX_DELAY to fully block and suspend the task until data arrives.
 
+```c
 #include "freertos/queue.h"
 
 QueueHandle_t my_first_queue;
@@ -110,8 +113,8 @@ void consumer_task(void *pvParameters){
         }
     }
 }
-
-4. Mutual Exclusion and Resource Management via Mutexes
+```
+### 4. Mutual Exclusion and Resource Management via Mutexes
 When two processing routines target a shared peripheral or memory interface concurrently (such as an LCD display or a UART console), the data output streams can become garbled. A Mutex acts as an atomic token lock guaranteeing exclusive access.
 
 📋 The Conflict (No Lock Control)
@@ -129,6 +132,7 @@ xSemaphoreTake(mutex, timeout): Obtains exclusive ownership rights. If the key i
 
 xSemaphoreGive(mutex): Returns the token, unblocking subsequent waiting threads.
 
+```c
 #include "freertos/semphr.h"
 SemaphoreHandle_t serial_mutex;
 
@@ -140,8 +144,9 @@ void send_secure_message(const char *name, const char *status){
         xSemaphoreGive(serial_mutex);
     }
 }
+```
 
-5. Asynchronous Hardware Parallelism via Dual-Core Pinning
+### 5. Asynchronous Hardware Parallelism via Dual-Core Pinning
 The ESP32 architecture contains two distinct physical processing units (Core 0 and Core 1). While standard tools manage routing abstractly, developers can pin computational loads manually to specific cores to achieve true hardware parallelism.
 
 🛠️ Extended Dual-Core API
@@ -149,6 +154,7 @@ xTaskCreatePinnedToCore(...): Accepts a 7th argument (BaseType_t xCoreID) to map
 
 xPortGetCoreID(): Checks the execution context at runtime, returning 0 or 1.
 
+```c
 void core_zero_worker(void *pvParameters) {
     while(1){
         printf("[Task 1] Running on Core ID : %d \n", xPortGetCoreID());
@@ -167,7 +173,7 @@ void app_main(void){
     xTaskCreatePinnedToCore(core_zero_worker, "Core 0 Task", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(core_one_worker, "Core 1 Task", 2048, NULL, 5, NULL, 1);
 }
-
+```
 Parallel Output Execution
 Spawning Dual core framework.. 
 [Task 1] Running on Core ID : 0 
@@ -223,7 +229,7 @@ void app_main(void) {
         xTimerStart(my_periodic_timer, 0);
     }
 }
-
+```
 📺 Console Output Behavior
 Plaintext
 Initializing Software Timers ....
